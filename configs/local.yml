@@ -1,0 +1,16 @@
+build:
+  date: 2024/02/14
+  number: 1
+
+systemService:
+  name: ms-spw-booking-service
+  port: 8080
+  domain: localhost
+  endpoint: /api/v1
+
+log:
+  kibana:
+    suffix: ms-spw-booking-service
+  relic:
+    appName: API-ms-spw-booking-service
+  format: 2006-01-02T15:04:05.999

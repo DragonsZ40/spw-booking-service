@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {APPLICATION_NAME}
+  labels:
+    # app: application name
+    app: {APPLICATION_NAME}
+    # env: uat2, uat3, uat4, uat5, uat6, uat7, prod
+    env: {ENVIRONMENT}
+    version: {VERSION}
+    # tier: frontend, backend, cache
+    tier: {TIER}
+    deploymentDate: {DEPLOYMENT_DATE}
+spec:
+  # replica set
+  replicas: {NO_OF_REPLICAS}
+  selector: 
+    matchLabels:
+      app: {APPLICATION_NAME}
+      env: {ENVIRONMENT}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxSurge : the maximum number of Pods that can be created over the desired number of Pods.
+      maxSurge: 1
+      # maxUnavailable : maximum number of Pods that can be unavailable during the update process
+      maxUnavailable: 0
+  template:
+    metadata:
+      # label of pod
+      labels:
+        app: {APPLICATION_NAME}
+        env: {ENVIRONMENT}
+        version: {VERSION}
+        tier: {TIER}
+        deploymentDate: {DEPLOYMENT_DATE}
+    spec:
+      containers:
+      - name: {APPLICATION_NAME}
+        image: xxxx.xxxx/{project}/{IMAGE_NAME}:{IMAGE_TAG}
+        imagePullPolicy: Always
+        # resource per pod
+        resources:
+          limits:
+            # cpu: {LIMIT_POD_CPU}
+            memory: {LIMIT_POD_MEM}
+          requests:
+            cpu: {REQUEST_POD_CPU}
+            memory: {REQUEST_POD_MEM}
+        # Define an environment variable for a container
+        env:
+        - name: spring.profiles.active
+          value: {ENVIRONMENT}
+        ports:
+        - containerPort: {APPLICATION_PORT_NO}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {APPLICATION_PORT_NO}
+          # initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 60
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {APPLICATION_PORT_NO}
+          # initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 60
+      imagePullSecrets:
+      - name: zetta-ms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {APPLICATION_NAME}
+  labels:
+    app: {APPLICATION_NAME}
+    env: {ENVIRONMENT}
+    version: {VERSION}
+    tier: {TIER}
+    deploymentDate: {DEPLOYMENT_DATE}
+spec:
+  ports:
+  - port: {APPLICATION_PORT_NO}
+    # targetPort point to Deployment (containerPort)
+    targetPort: {APPLICATION_PORT_NO}
+  selector:
+    # point to Deployment by labels
+    app: {APPLICATION_NAME}
+    env: {ENVIRONMENT}
+  type: ClusterIP
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {APPLICATION_NAME}
+  labels:
+    deploymentDate: {DEPLOYMENT_DATE}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "1024m"
+spec:
+  rules:
+  - host: {APPLICATION_NAME}.{KUBE_NAMESPACE}.{KUBE_CLUSTER_NAME}.dev.th
+    http:
+      paths:
+        - backend:
+            serviceName: {APPLICATION_NAME}
+            servicePort: {APPLICATION_PORT_NO}
+          path: /
